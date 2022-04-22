@@ -54,9 +54,10 @@ fn generate_in_place_set(input: syn::DeriveInput) -> quote::__private::TokenStre
             semi_token: None
         }
     });
-    let filtered_generics : Vec<syn::Generics> = variants.iter().map(|var| {
+    let filtered_generics_full : Vec<syn::Generics> = variants.iter().map(|var| {
         filter_generics_for_use(&var.fields, &generics)
     }).collect();
+    let filtered_generics = filtered_generics_full.iter().map(|gen| gen.split_for_impl().1);
     let struct_names = variants.iter().map(|var| var.ident.clone() );
     let union_field_names = variants.iter().map(|var| snake_ident(&var.ident) );
 
@@ -82,15 +83,19 @@ fn generate_in_place_set(input: syn::DeriveInput) -> quote::__private::TokenStre
                 let vp = unnamed.iter().enumerate().map(|(i, syn::Field { ty: f, .. })| {
                     let vn = format_ident!("i{}", i);
                     quote! {
-                        #vn : impl FnOnce(*mut #f)
+                        #vn : impl FnOnce(*mut core::mem::MaybeUninit<#f>)
                     }});
+                let fs = unnamed.iter().map(|syn::Field { ty: f, .. }| {
+                    f
+                });
                 syn::parse_quote! {
+                    #[inline(never)]
                 fn #init_name(a: *mut core::mem::MaybeUninit<#type_name #generics>, #(#vp),*) {
                     unsafe {
                         let b: *mut core::mem::MaybeUninit<#mod_name::#union_name #generics> = core::mem::transmute(a);
                         core::ptr::addr_of_mut!((*(*(*b).as_mut_ptr()).#name).0).write(#mod_name::#local_tag_name::#var_name);
                         // MUST NOT panic or fail to fill it's argument.
-                        #(#vns(core::ptr::addr_of_mut!((*(*(*b).as_mut_ptr()).#name).#field_nos));)*
+                        #(#vns(core::ptr::addr_of_mut!((*(*(*b).as_mut_ptr()).#name).#field_nos) as *mut core::mem::MaybeUninit<#fs>);)*
                     }
                 }
                 }
@@ -108,6 +113,8 @@ fn generate_in_place_set(input: syn::DeriveInput) -> quote::__private::TokenStre
         }
     });
 
+    let impl_type_generics_top = generics.split_for_impl().1;
+
     let the_impl = syn::ItemImpl {
         attrs: Vec::new(),
         defaultness: None,
@@ -115,7 +122,7 @@ fn generate_in_place_set(input: syn::DeriveInput) -> quote::__private::TokenStre
         impl_token: syn::Token![impl](proc_macro2::Span::call_site()),
         generics: impl_generics2,
         trait_: None,
-        self_ty: syn::parse_quote! { #ident #generics },
+        self_ty: syn::parse_quote! { #ident #impl_type_generics_top },
         brace_token: syn::token::Brace(proc_macro2::Span::call_site()),
         items: funcs.collect()
     };
