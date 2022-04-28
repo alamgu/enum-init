@@ -19,7 +19,7 @@ fn generate_in_place_set(input: syn::DeriveInput) -> quote::__private::TokenStre
         // ::std::compile_error!("Can't derive in-pace setter for non-enum");
     };
 
-    let mod_name = format_ident!("{}_internal", ident);
+    let mod_name = snake_ident(&format_ident!("{}_internal", ident));
     let tag_name = format_ident!("{}Tag", ident);
     let union_name = format_ident!("{}Union", ident);
 
@@ -78,7 +78,7 @@ fn generate_in_place_set(input: syn::DeriveInput) -> quote::__private::TokenStre
                     format_ident!("i{}", i)
                 });
                 let field_nos = unnamed.iter().enumerate().map(|(i, _)| {
-                    i+1
+                    syn::Index::from(i+1)
                 });
                 let vp = unnamed.iter().enumerate().map(|(i, syn::Field { ty: f, .. })| {
                     let vn = format_ident!("i{}", i);
@@ -131,6 +131,7 @@ fn generate_in_place_set(input: syn::DeriveInput) -> quote::__private::TokenStre
 
     quote! {
         #vis mod #mod_name {
+            use super::{*};
 //            #[derive(Debug)]
             #[repr(u8)]
             pub enum #tag_name {
