@@ -1,6 +1,7 @@
 use proc_macro::TokenStream;
 use quote::{format_ident, quote}; // , quote_spanned};
 use syn;
+use inflector;
 
 #[proc_macro_derive(InPlaceInit)]
 pub fn derive_in_place_set(input: TokenStream) -> TokenStream {
