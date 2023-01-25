@@ -18,7 +18,7 @@ pub enum TestEnum2<A> {
 #[derive(InPlaceInit)]
 #[repr(u8)]
 pub enum TestEnum3<A> {
-    VariantVec(Vec<A>)
+    VariantVec(Vec<A>),
 }
 
 pub trait Z {
@@ -27,9 +27,12 @@ pub trait Z {
 
 #[derive(InPlaceInit)]
 #[repr(u8)]
-pub enum TestEnum4<A> where A: Z {
+pub enum TestEnum4<A>
+where
+    A: Z,
+{
     VariantA(<A as Z>::Q),
-    VariantB(Vec<<A as Z>::Q>)
+    VariantB(Vec<<A as Z>::Q>),
 }
 
 /*
